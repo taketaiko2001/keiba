@@ -14,6 +14,7 @@ race_id の構造: [年4桁][場コード2桁][開催回?2桁][日2桁][レー�
 主な場コード: 43=船橋 47=笠松 50=園田 (他場は要調査)
 """
 import sys
+import re
 import json
 import requests
 from bs4 import BeautifulSoup
@@ -44,6 +45,11 @@ def fetch_shutuba(race_id: str) -> dict:
 
         name_el = row.select_one("td.HorseInfo span.HorseName a") or row.select_one("td.HorseInfo span.HorseName")
         horse_name = name_el.get_text(strip=True) if name_el else None
+        horse_id = None
+        if name_el and name_el.get("href"):
+            m = re.search(r"/horse/(\w+)", name_el["href"])
+            if m:
+                horse_id = m.group(1)
 
         jockey_el = row.select_one("td.Jockey span.Jockey a") or row.select_one("td.Jockey")
         jockey = jockey_el.get_text(strip=True) if jockey_el else None
@@ -65,6 +71,7 @@ def fetch_shutuba(race_id: str) -> dict:
 
         horses.append({
             "umaban": umaban,
+            "horse_id": horse_id,
             "horse_name": horse_name,
             "jockey": jockey,
             "weight_kg": weight,

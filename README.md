@@ -15,9 +15,10 @@
 
 netkeibaのページをWebFetch（要約AI経由）で読むと、表の列を読み違えて誤ったオッズを返すことが実測で確認されている（例：「人気順位」を「単勝オッズ」と誤答）。そのため、生HTMLを直接取得してBeautifulSoupで確実にパースするツールを用意している。
 
-- `tools/netkeiba_fetch.py <race_id>` — 出馬表ページから馬番・馬名・騎手・斤量・単勝オッズ・人気順を人気順にソートして取得する。
+- `tools/netkeiba_fetch.py <race_id>` — 出馬表ページから馬番・馬名・horse_id・騎手・斤量・単勝オッズ・人気順を人気順にソートして取得する。horse_id は netkeiba_horse.py への入力に使える。
 - `tools/netkeiba_result.py <race_id>` — 結果・払戻ページから着順・タイム・上がり3F・確定単勝オッズと、単勝/複勝/馬連/ワイド/馬単/3連複/3連単それぞれの払戻金・組み合わせ・的中人気を取得する。レース未確定の場合は `is_finalized: false` を返す。
+- `tools/netkeiba_horse.py <horse_id>` — 馬個別ページから過去の全競走成績（日付・開催・着順・単勝オッズ・人気・騎手・斤量・距離・馬場状態・タイム・着差・通過順位＝脚質の目安・上がり3F・馬体重増減・賞金）を新しい順に取得する。近走のフォーム分析に使う。既知の制約：JRA参戦歴がある馬など一部でテーブル列がずれ、レース名以降が正しく取得できないケースがある（要修正）。
 
-事前に `pip install -r tools/requirements.txt`（requests, beautifulsoup4）が必要。race_id は `YYYY` + 場コード2桁（船橋43／笠松47／園田50など）+ 開催回2桁 + 日2桁 + レース番号2桁、の16桁。netkeibaのレースページURLから確認できる。
+事前に `pip install -r tools/requirements.txt`（requests, beautifulsoup4）が必要。race_id は `YYYY`(4桁) + 場コード2桁（船橋43／笠松47／園田50など）+ 開催月2桁 + 開催日2桁 + レース番号2桁、の16桁。netkeibaのレースページURLから確認できる。
 
 出力はJSON。標準出力にUTF-8で書き出すか、第2引数にファイルパスを渡せばそこに保存する。
