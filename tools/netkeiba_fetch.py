@@ -51,11 +51,41 @@ def fetch_shutuba(race_id: str) -> dict:
             if m:
                 horse_id = m.group(1)
 
-        jockey_el = row.select_one("td.Jockey span.Jockey a") or row.select_one("td.Jockey")
-        jockey = jockey_el.get_text(strip=True) if jockey_el else None
+        age_sex_el = row.select_one("span.Age")
+        age_sex = age_sex_el.get_text(strip=True) if age_sex_el else None  # 例: "牡5" (性別+年齢)
 
-        weight_el = row.select_one("td.Txt_C:not(.Popular)")
-        weight = weight_el.get_text(strip=True) if weight_el else None
+        jockey_a = row.select_one("td.Jockey span.Jockey a") or row.select_one("td.Jockey a")
+        jockey_el = jockey_a or row.select_one("td.Jockey")
+        jockey = jockey_el.get_text(strip=True) if jockey_el else None
+        jockey_id = None
+        if jockey_a and jockey_a.get("href"):
+            m = re.search(r"/jockey/(?:result/recent/)?(\w+)", jockey_a["href"])
+            if m:
+                jockey_id = m.group(1)
+
+        trainer_a = row.select_one("td.Trainer a")
+        trainer = trainer_a.get_text(strip=True) if trainer_a else None
+        trainer_id = None
+        if trainer_a and trainer_a.get("href"):
+            m = re.search(r"/trainer/(?:result/recent/)?(\w+)", trainer_a["href"])
+            if m:
+                trainer_id = m.group(1)
+
+        weight_carried_el = row.select_one("td.Txt_C:not(.Popular)")
+        weight_carried_kg = weight_carried_el.get_text(strip=True) if weight_carried_el else None  # 斤量
+
+        body_weight = None
+        body_weight_diff = None
+        weight_td = row.select_one("td.Weight")
+        if weight_td:
+            # td.Weight は netkeiba側の閉じタグ漏れにより単勝オッズtdがネストされているため、
+            # 先頭の「馬体重(増減)」部分だけを正規表現で切り出す。
+            raw = weight_td.get_text(strip=True)
+            bm = re.match(r"(\d+)(?:\(([+-]?\d+)\))?", raw)
+            if bm:
+                body_weight = int(bm.group(1))
+                if bm.group(2):
+                    body_weight_diff = int(bm.group(2))
 
         odds_el = row.select_one("td.Popular.Txt_R")
         odds_raw = odds_el.get_text(strip=True) if odds_el else None
@@ -73,8 +103,14 @@ def fetch_shutuba(race_id: str) -> dict:
             "umaban": umaban,
             "horse_id": horse_id,
             "horse_name": horse_name,
+            "age_sex": age_sex,
             "jockey": jockey,
-            "weight_kg": weight,
+            "jockey_id": jockey_id,
+            "trainer": trainer,
+            "trainer_id": trainer_id,
+            "weight_carried_kg": weight_carried_kg,
+            "body_weight_kg": body_weight,
+            "body_weight_diff_kg": body_weight_diff,
             "win_odds": odds,
             "ninki_rank": ninki,
         })
