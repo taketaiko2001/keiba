@@ -2,13 +2,12 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>仮想馬券日誌 | 自動更新版</title>
+<title>仮想馬券日誌 | ダイジェスト版</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8E%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
   :root{
     --bg:#f3efe0;
@@ -18,12 +17,15 @@
     --ink-muted:#7c7059;
     --border:#ddd2b5;
     --accent:#a9761f;
+    --accent-soft:#f1e3c2;
     --win:#1f6b46;
+    --win-soft:#e3efe4;
     --loss:#a23829;
+    --loss-soft:#f6e6e0;
     --shadow:0 1px 2px rgba(33,28,19,.06), 0 8px 24px rgba(33,28,19,.07);
   }
   @media (prefers-color-scheme: dark){
-    :root{
+    :root:not([data-theme="light"]){
       --bg:#101d17;
       --surface:#16261e;
       --surface-2:#1d3226;
@@ -31,10 +33,28 @@
       --ink-muted:#93a598;
       --border:#2c4437;
       --accent:#d7ac57;
+      --accent-soft:#2c2413;
       --win:#63b586;
+      --win-soft:#1a2e22;
       --loss:#e08b72;
+      --loss-soft:#2e1d17;
       --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
     }
+  }
+  :root[data-theme="dark"]{
+    --bg:#101d17;
+    --surface:#16261e;
+    --surface-2:#1d3226;
+    --ink:#ece5d2;
+    --ink-muted:#93a598;
+    --border:#2c4437;
+    --accent:#d7ac57;
+    --accent-soft:#2c2413;
+    --win:#63b586;
+    --win-soft:#1a2e22;
+    --loss:#e08b72;
+    --loss-soft:#2e1d17;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
   }
   *{box-sizing:border-box;}
   html,body{margin:0; padding:0;}
@@ -42,32 +62,33 @@
     background:var(--bg);
     color:var(--ink);
     font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN",sans-serif;
-    line-height:1.8;
+    line-height:1.75;
     -webkit-font-smoothing:antialiased;
   }
   @media (prefers-reduced-motion: reduce){
     *{animation-duration:.01ms !important; transition-duration:.01ms !important;}
   }
-  .wrap{max-width:680px; margin:0 auto; padding:0 18px 72px;}
+  .wrap{max-width:640px; margin:0 auto; padding:0 16px 72px;}
 
-  .masthead{padding:26px 0 14px;}
+  .masthead{padding:24px 0 12px;}
   .kicker{
     display:flex; align-items:center; gap:8px;
-    font-family:"Oswald",sans-serif; font-size:11px; letter-spacing:.16em;
+    font-family:"Oswald",sans-serif; font-size:11px; letter-spacing:.15em;
     text-transform:uppercase; color:var(--ink-muted);
   }
   .kicker .dot{width:6px;height:6px;border-radius:50%; background:var(--win); flex:none;
     box-shadow:0 0 0 3px color-mix(in srgb, var(--win) 20%, transparent);}
   h1{
     font-family:"Shippori Mincho",serif; font-weight:800;
-    font-size:clamp(26px,7vw,36px); margin:.3em 0 .1em; text-wrap:balance; letter-spacing:.02em;
+    font-size:clamp(24px,7vw,32px); margin:.3em 0 .1em; text-wrap:balance; letter-spacing:.02em;
   }
-  .lede{margin:0 0 4px; color:var(--ink-muted); font-size:14px; max-width:36em;}
+  .lede{margin:0 0 4px; color:var(--ink-muted); font-size:13.5px; max-width:36em;}
+  .lede a{color:var(--ink-muted);}
 
   .sync-bar{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     background:var(--surface); border:1px solid var(--border); border-radius:12px;
-    box-shadow:var(--shadow); padding:11px 14px; margin:16px 0 24px; font-size:12.5px; color:var(--ink-muted);
+    box-shadow:var(--shadow); padding:10px 14px; margin:16px 0 22px; font-size:12px; color:var(--ink-muted);
   }
   .sync-bar strong{color:var(--ink); font-weight:600;}
   .sync-bar button{
@@ -81,55 +102,103 @@
   @keyframes pulse{0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.35;transform:scale(.7);}}
   .sync-bar.err .sync-dot{background:var(--loss); animation:none;}
 
-  /* rendered markdown content */
-  #content{background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:22px 20px 26px;}
-  #content h1{display:none;} /* the md's own H1 duplicates our masthead */
-  #content h2{
+  section{margin:0 0 30px;}
+  .sec-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+    margin:0 0 12px;
+  }
+  .sec-title{
     font-family:"Oswald",sans-serif; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
-    color:var(--ink-muted); margin:34px 0 12px; display:flex; align-items:center; gap:10px;
-    border-bottom:0; padding-bottom:0;
+    color:var(--ink-muted); display:flex; align-items:center; gap:8px;
   }
-  #content h2:first-of-type{margin-top:0;}
-  #content h3{
-    font-family:"Shippori Mincho",serif; font-weight:600; font-size:18px; margin:28px 0 10px;
-    padding-top:16px; border-top:1px dashed var(--border); text-wrap:balance;
-  }
-  #content h3:first-of-type{border-top:none; padding-top:0;}
-  #content p{margin:0 0 12px; font-size:14.5px;}
-  #content ul, #content ol{margin:0 0 12px; padding-left:1.3em; font-size:14.5px;}
-  #content li{margin:4px 0;}
-  #content strong{color:var(--ink); font-weight:700;}
-  #content hr{border:none; border-top:1px dashed var(--border); margin:22px 0;}
-  #content blockquote{
-    margin:0 0 14px; padding:10px 14px; border-left:3px solid var(--accent);
-    background:color-mix(in srgb, var(--accent) 7%, transparent); border-radius:0 8px 8px 0;
-    font-size:13.8px; color:var(--ink);
-  }
-  #content code{
-    background:var(--surface-2); border-radius:4px; padding:1px 5px;
-    font-size:.92em; font-family:ui-monospace,Consolas,monospace;
-  }
-  #content a{color:var(--accent);}
+  .sec-sub{font-size:11.5px; color:var(--ink-muted);}
 
-  .tablewrap{overflow-x:auto; margin:0 0 16px; border-radius:10px; border:1px solid var(--border);}
-  #content table{width:100%; border-collapse:collapse; font-size:13.5px; background:var(--surface);}
-  #content th{
-    text-align:left; font-family:"Oswald",sans-serif; font-size:10.5px; letter-spacing:.06em;
-    text-transform:uppercase; color:var(--ink-muted); font-weight:500; padding:8px 10px;
-    border-bottom:1px solid var(--border); background:var(--surface-2); white-space:nowrap;
+  /* stat cards */
+  .stats-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  @media (max-width:420px){ .stats-grid{grid-template-columns:1fr;} }
+  .stat-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    box-shadow:var(--shadow); padding:16px 16px 14px;
   }
-  #content td{padding:8px 10px; border-bottom:1px solid var(--border); font-variant-numeric:tabular-nums; white-space:nowrap;}
-  #content tr:last-child td{border-bottom:none;}
-
-  .state-msg{padding:40px 18px; text-align:center; color:var(--ink-muted); font-size:14px;}
-  .state-msg .spin{
-    width:22px;height:22px;margin:0 auto 14px;border-radius:50%;
-    border:2.5px solid var(--border); border-top-color:var(--accent);
-    animation:spin 0.9s linear infinite;
+  .stat-card__label{
+    font-family:"Oswald",sans-serif; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--ink-muted); margin:0 0 10px;
   }
-  @keyframes spin{to{transform:rotate(360deg);}}
+  .stat-card__metrics{display:grid; grid-template-columns:1fr 1fr; gap:10px 12px;}
+  .metric__label{font-size:10.5px; color:var(--ink-muted); margin:0 0 2px;}
+  .metric__value{font-family:"Oswald",sans-serif; font-size:16.5px; font-variant-numeric:tabular-nums; font-weight:500;}
+  .metric__value.win{color:var(--win);}
+  .metric__value.loss{color:var(--loss);}
+  .metric__value.big{font-size:20px; font-weight:600;}
 
-  footer{margin-top:22px; font-size:11.5px; color:var(--ink-muted); text-align:center;}
+  /* pick card (today's target) */
+  .pick-card{
+    background:var(--surface); border:1px solid var(--accent); border-radius:16px;
+    box-shadow:var(--shadow); padding:18px 18px 16px; position:relative;
+    background-image:linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, var(--surface)), var(--surface) 90px);
+  }
+  .pick-card + .pick-card{margin-top:14px;}
+  .pill{
+    display:inline-flex; align-items:center; gap:5px; font-family:"Oswald",sans-serif;
+    font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; font-weight:600;
+    border-radius:999px; padding:3px 10px 3px 8px;
+  }
+  .pill.win{background:var(--win-soft); color:var(--win);}
+  .pill.loss{background:var(--loss-soft); color:var(--loss);}
+  .pill.partial{background:var(--accent-soft); color:var(--accent);}
+  .pill.pending{background:var(--accent-soft); color:var(--accent);}
+  .pill .pdot{width:5px;height:5px;border-radius:50%; background:currentColor; animation:pulse 1.6s ease-in-out infinite;}
+  .pick-card .race-meta{font-size:11.5px; color:var(--ink-muted); margin:10px 0 2px;}
+  .pick-card h3, .race-card h3{
+    font-family:"Shippori Mincho",serif; font-weight:600; font-size:17px; margin:2px 0 12px; text-wrap:balance;
+  }
+  .block-label{
+    font-family:"Oswald",sans-serif; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--ink-muted); margin:14px 0 5px;
+  }
+  .block-label:first-of-type{margin-top:2px;}
+  .block-text{font-size:13.5px; margin:0;}
+  .block-text ul{margin:2px 0 0; padding-left:1.2em;}
+  .block-text li{margin:3px 0;}
+  .block-text strong{color:var(--ink); font-weight:700;}
+  .block-text code{background:var(--surface-2); border-radius:4px; padding:1px 5px; font-size:.92em; font-family:ui-monospace,Consolas,monospace;}
+  .bet-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px;}
+  .bet-list li{
+    font-size:13px; background:var(--surface-2); border-radius:8px; padding:6px 10px;
+    font-variant-numeric:tabular-nums;
+  }
+  .pick-note{font-size:11.5px; color:var(--ink-muted); margin:14px 0 0; padding-top:10px; border-top:1px dashed var(--border);}
+
+  /* race review cards */
+  .race-list{display:flex; flex-direction:column; gap:12px;}
+  .race-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    box-shadow:var(--shadow); padding:16px 16px 14px;
+  }
+  .race-card .race-meta{font-size:11.5px; color:var(--ink-muted); margin:10px 0 2px;}
+  .race-card .result-text{font-size:13.5px; margin:0 0 10px;}
+  .race-card .bet-line{
+    font-size:12px; color:var(--ink-muted); margin:0 0 10px; font-variant-numeric:tabular-nums;
+  }
+  .race-card .foot-stat{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    font-family:"Oswald",sans-serif; font-size:13px; font-variant-numeric:tabular-nums;
+    padding-top:10px; border-top:1px dashed var(--border);
+  }
+  .race-card .foot-stat .rate.win{color:var(--win); font-weight:600;}
+  .race-card .foot-stat .rate.loss{color:var(--loss); font-weight:600;}
+
+  .empty-state{
+    background:var(--surface); border:1px dashed var(--border); border-radius:14px;
+    padding:22px 18px; text-align:center; color:var(--ink-muted); font-size:13px;
+  }
+  .parse-fail{
+    background:var(--loss-soft); border:1px solid var(--loss); border-radius:12px;
+    padding:14px 16px; font-size:12.5px; color:var(--ink);
+  }
+  .parse-fail a{color:var(--loss);}
+
+  footer{margin-top:8px; font-size:11.5px; color:var(--ink-muted); text-align:center; line-height:1.9;}
   footer a{color:var(--ink-muted);}
 </style>
 </head>
@@ -137,9 +206,9 @@
 <div class="wrap">
 
   <div class="masthead">
-    <div class="kicker"><span class="dot" aria-hidden="true"></span>仮想シミュレーション・実際の金銭移動なし・自動更新版</div>
+    <div class="kicker"><span class="dot" aria-hidden="true"></span>仮想シミュレーション・実際の金銭移動なし・ダイジェスト版</div>
     <h1>仮想馬券日誌</h1>
-    <p class="lede">GitHub上の運用記録を毎回そのまま取得して表示しています。ページを開くたびに最新の状態が見られます。</p>
+    <p class="lede">要点だけをまとめた自動更新ページです。全レース・全データは<a href="https://github.com/taketaiko2001/keiba/blob/main/%E7%AB%B6%E9%A6%AC%E9%81%8B%E7%94%A8%E8%A8%98%E9%8C%B2.md" target="_blank" rel="noopener">運用記録全文（GitHub）</a>で確認できます。</p>
   </div>
 
   <div class="sync-bar" id="syncBar">
@@ -147,11 +216,27 @@
     <button id="refreshBtn" type="button">今すぐ更新</button>
   </div>
 
-  <div id="content">
-    <div class="state-msg"><div class="spin" aria-hidden="true"></div>運用記録を取得しています…</div>
-  </div>
+  <section id="secStats">
+    <div class="sec-head"><span class="sec-title">成績サマリー</span></div>
+    <div id="statsBody"><div class="empty-state">読み込み中…</div></div>
+  </section>
 
-  <footer>データ元: <a href="https://github.com/taketaiko2001/keiba/blob/main/%E7%AB%B6%E9%A6%AC%E9%81%8B%E7%94%A8%E8%A8%98%E9%8C%B2.md" target="_blank" rel="noopener">GitHub: 競馬運用記録.md</a> ／ 開くたび自動取得・5分ごとに再取得</footer>
+  <section id="secPick">
+    <div class="sec-head"><span class="sec-title">本日の狙い目</span><span class="sec-sub" id="pickSub"></span></div>
+    <div id="pickBody"><div class="empty-state">読み込み中…</div></div>
+  </section>
+
+  <section id="secRecent">
+    <div class="sec-head"><span class="sec-title">直近3レースの結果・回顧</span></div>
+    <div id="recentBody" class="race-list"><div class="empty-state">読み込み中…</div></div>
+  </section>
+
+  <section id="secGrade">
+    <div class="sec-head"><span class="sec-title">直近の重賞レース</span></div>
+    <div id="gradeBody" class="race-list"><div class="empty-state">読み込み中…</div></div>
+  </section>
+
+  <footer>データ元: <a href="https://github.com/taketaiko2001/keiba/blob/main/%E7%AB%B6%E9%A6%AC%E9%81%8B%E7%94%A8%E8%A8%98%E9%8C%B2.md" target="_blank" rel="noopener">GitHub: 競馬運用記録.md</a><br>開くたび自動取得・5分ごとに再取得</footer>
 </div>
 
 <script>
@@ -162,21 +247,26 @@
   var BRANCH = "main";
   var FILENAME = "競馬運用記録.md";
   var RAW_URL = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/" + BRANCH + "/" + encodeURIComponent(FILENAME);
+  var FILE_URL = "https://github.com/" + OWNER + "/" + REPO + "/blob/" + BRANCH + "/" + encodeURIComponent(FILENAME);
 
-  var contentEl = document.getElementById("content");
   var syncBar = document.getElementById("syncBar");
-  var syncDot = document.getElementById("syncDot");
   var syncText = document.getElementById("syncText");
   var refreshBtn = document.getElementById("refreshBtn");
 
   function escapeHtml(s){
-    return s.replace(/[&<>"']/g, function(c){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
       return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
     });
   }
 
-  function wrapTables(html){
-    return html.replace(/<table>/g, '<div class="tablewrap"><table>').replace(/<\/table>/g, "</table></div>");
+  function yen(n){
+    if (n === null || n === undefined || isNaN(n)) return "-";
+    return (n < 0 ? "-" : "") + "¥" + Math.abs(Math.round(n)).toLocaleString("ja-JP");
+  }
+
+  function pct(n){
+    if (n === null || n === undefined || isNaN(n)) return "-";
+    return n.toFixed(1) + "%";
   }
 
   function formatClock(d){
@@ -195,19 +285,245 @@
     syncText.textContent = msg;
   }
 
-  function render(md){
-    if (typeof marked === "undefined") {
-      contentEl.innerHTML = '<div class="state-msg">Markdownレンダラーの読み込みに失敗しました。<a href="' + RAW_URL + '" target="_blank" rel="noopener">元データを直接見る</a></div>';
+  // renders a **bold** / `code` / "- bullet" text blob into safe HTML
+  function renderBlock(text){
+    if (!text) return "";
+    var lines = String(text).split("\n").map(function(l){ return l.trim(); }).filter(Boolean);
+    var html = "";
+    var i = 0;
+    while (i < lines.length) {
+      if (/^-\s+/.test(lines[i])) {
+        var items = [];
+        while (i < lines.length && /^-\s+/.test(lines[i])) {
+          items.push(inline(lines[i].replace(/^-\s+/, "")));
+          i++;
+        }
+        html += "<ul>" + items.map(function(t){ return "<li>" + t + "</li>"; }).join("") + "</ul>";
+      } else {
+        var para = [];
+        while (i < lines.length && !/^-\s+/.test(lines[i])) {
+          para.push(lines[i]);
+          i++;
+        }
+        html += "<p>" + inline(para.join(" ")) + "</p>";
+      }
+    }
+    return html;
+  }
+
+  function inline(s){
+    var esc = escapeHtml(s);
+    esc = esc.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    esc = esc.replace(/`(.+?)`/g, "<code>$1</code>");
+    return esc;
+  }
+
+  function betOneLine(betText){
+    if (!betText) return "-";
+    return String(betText).split("\n").map(function(l){ return l.trim().replace(/^-\s+/, ""); })
+      .filter(Boolean).join("　／　");
+  }
+
+  // ---------- markdown parsing ----------
+
+  function parseSummary(md){
+    var m = md.match(/## 収支サマリー\n\|[\s\S]*?\n\n/);
+    if (!m) return [];
+    var lines = m[0].split("\n").filter(function(l){ return l.trim().indexOf("|") === 0; });
+    lines = lines.slice(2);
+    var num = function(s){ return parseFloat(String(s).replace(/[^\d.-]/g, "")) || 0; };
+    return lines.map(function(line){
+      var cells = line.split("|").map(function(c){ return c.trim(); }).filter(function(c){ return c.length; });
+      return {
+        date: cells[0], invest: num(cells[1]), payout: num(cells[2]), profit: num(cells[3]),
+        cumInvest: num(cells[4]), cumPayout: num(cells[5]), cumRate: num(cells[6])
+      };
+    });
+  }
+
+  function parseRaces(md){
+    var sec = md.match(/## レース記録\n([\s\S]*?)\n## 反省/);
+    if (!sec) return [];
+    var blocks = sec[1].split(/\n---\n/).map(function(b){ return b.trim(); }).filter(Boolean);
+    return blocks.map(function(block){
+      var titleMatch = block.match(/^### (\d{4}-\d{2}-\d{2})（.）\s*(.+)$/m);
+      var date = titleMatch ? titleMatch[1] : null;
+      var title = titleMatch ? titleMatch[2].trim() : block.slice(0, 40);
+      var grade = /[(（](G[123ⅠⅡⅢ]|Jpn ?[123ⅠⅡⅢ])[)）]/i.test(title);
+
+      var reasonMatch = block.match(/\*\*選定理由[^*]*\*\*[:：]\s*([\s\S]*?)(?=\n\n\*\*|\n\n#|$)/);
+      var reason = reasonMatch ? reasonMatch[1].trim() : "";
+
+      var analysisMatch = block.match(/\*\*(?:過去成績分析|相手選定)[^*]*\*\*[:：]?\s*([\s\S]*?)(?=\n\n\*\*買い目)/);
+      var analysis = analysisMatch ? analysisMatch[1].trim() : "";
+
+      var betMatch = block.match(/\*\*買い目[^*]*\*\*[^\n]*\n([\s\S]*?)(?=\n\n\*\*結果)/);
+      var bet = betMatch ? betMatch[1].trim() : "";
+
+      var resultMatch = block.match(/\*\*結果\*\*[^\n]*[:：]\s*([\s\S]*?)(?=\n\n\||\n\n---|$)/);
+      var resultText = resultMatch ? resultMatch[1].trim() : "";
+      var pending = /未確定/.test(resultText);
+
+      var totalsMatch = block.match(/\*\*合計\*\*[^\n]*/);
+      var stake = null, payout = null;
+      if (totalsMatch) {
+        var nums = totalsMatch[0].match(/([\d,]+)円/g);
+        if (nums && nums.length >= 2) {
+          stake = parseFloat(nums[0].replace(/[^\d.]/g, ""));
+          payout = parseFloat(nums[nums.length - 1].replace(/[^\d.]/g, ""));
+        }
+      }
+
+      var profitMatch = block.match(/収支[:：]\s*(-?[\d,]+)円(?:\s*[（(]回収率\s*([\d.]+)%[)）])?/);
+      var profit = profitMatch ? parseFloat(profitMatch[1].replace(/,/g, "")) : null;
+      var rate = profitMatch && profitMatch[2] ? parseFloat(profitMatch[2]) : null;
+
+      var reflectionMatch = block.match(/反省・次回への示唆[:：]\s*([\s\S]*?)(?=\n\n|$)/);
+      var reflection = reflectionMatch ? reflectionMatch[1].trim() : resultText;
+
+      var badge = "pending";
+      if (!pending) {
+        if (payout !== null && stake !== null) {
+          badge = payout > stake ? "win" : payout > 0 ? "partial" : "lose";
+        } else if (profit !== null) {
+          badge = profit > 0 ? "win" : /払戻：0円|不的中/.test(resultText) ? "lose" : "partial";
+        }
+      }
+
+      return {
+        date: date, title: title, grade: grade, reason: reason, analysis: analysis, bet: bet,
+        resultText: resultText, pending: pending, stake: stake, payout: payout, profit: profit,
+        rate: rate, reflection: reflection, badge: badge
+      };
+    });
+  }
+
+  var BADGE_LABEL = { win: "○ 的中", partial: "△ 一部的中", lose: "✗ ハズレ", pending: "結果待ち" };
+
+  function badgePill(type){
+    var pdot = type === "pending" ? '<span class="pdot" aria-hidden="true"></span>' : "";
+    return '<span class="pill ' + type + '">' + pdot + escapeHtml(BADGE_LABEL[type] || type) + "</span>";
+  }
+
+  function daysBetween(a, b){
+    var da = new Date(a + "T00:00:00Z");
+    var db = new Date(b + "T00:00:00Z");
+    return Math.round((db - da) / 86400000);
+  }
+
+  // ---------- render ----------
+
+  function renderStats(md){
+    var rows = parseSummary(md);
+    var el = document.getElementById("statsBody");
+    if (!rows.length) { el.innerHTML = '<div class="empty-state">収支サマリーの記録がまだありません。</div>'; return; }
+
+    var last = rows[rows.length - 1];
+    var refDate = rows.reduce(function(mx, r){ return r.date > mx ? r.date : mx; }, rows[0].date);
+    var last30 = rows.filter(function(r){ var d = daysBetween(r.date, refDate); return d >= 0 && d <= 30; });
+    var sumInvest = last30.reduce(function(s, r){ return s + r.invest; }, 0);
+    var sumPayout = last30.reduce(function(s, r){ return s + r.payout; }, 0);
+    var sumProfit = sumPayout - sumInvest;
+    var sumRate = sumInvest > 0 ? (sumPayout / sumInvest * 100) : null;
+
+    function card(label, invest, payout, profit, rate){
+      var pCls = profit > 0 ? "win" : profit < 0 ? "loss" : "";
+      var rCls = rate !== null && rate >= 100 ? "win" : rate !== null ? "loss" : "";
+      return '' +
+        '<div class="stat-card">' +
+          '<p class="stat-card__label">' + escapeHtml(label) + '</p>' +
+          '<div class="stat-card__metrics">' +
+            '<div><p class="metric__label">投資額</p><p class="metric__value">' + yen(invest) + '</p></div>' +
+            '<div><p class="metric__label">払戻額</p><p class="metric__value">' + yen(payout) + '</p></div>' +
+            '<div><p class="metric__label">収支</p><p class="metric__value ' + pCls + '">' + yen(profit) + '</p></div>' +
+            '<div><p class="metric__label">回収率</p><p class="metric__value big ' + rCls + '">' + pct(rate) + '</p></div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    el.innerHTML = '<div class="stats-grid">' +
+      card("累計成績（" + rows[0].date + "〜）", last.cumInvest, last.cumPayout, last.cumPayout - last.cumInvest, last.cumRate) +
+      card("直近30日（〜" + refDate + "）", sumInvest, sumPayout, sumProfit, sumRate) +
+      "</div>";
+  }
+
+  function pickCard(r){
+    var bodyBits = "";
+    if (r.reason) bodyBits += '<p class="block-label">選定理由</p><div class="block-text">' + renderBlock(r.reason) + "</div>";
+    if (r.analysis) bodyBits += '<p class="block-label">根拠（過去成績・相手選定）</p><div class="block-text">' + renderBlock(r.analysis) + "</div>";
+    var betHtml = r.bet ? '<ul class="bet-list">' + String(r.bet).split("\n").map(function(l){ return l.trim().replace(/^-\s+/, ""); })
+      .filter(Boolean).map(function(t){ return "<li>" + inline(t) + "</li>"; }).join("") + "</ul>" : '<p class="block-text">未確定</p>';
+    return '' +
+      '<div class="pick-card">' +
+        badgePill("pending") +
+        '<p class="race-meta">' + escapeHtml(r.date || "") + "</p>" +
+        "<h3>" + escapeHtml(r.title) + "</h3>" +
+        bodyBits +
+        '<p class="block-label">買い目</p>' + betHtml +
+        '<p class="pick-note">結果はページ更新時に自動反映されます（5分ごと自動再取得）。</p>' +
+      "</div>";
+  }
+
+  function renderPick(md){
+    var races = parseRaces(md);
+    var latestDate = races.reduce(function(mx, r){ return r.date && r.date > mx ? r.date : mx; }, "");
+    var picks = races.filter(function(r){ return r.pending && r.date === latestDate; });
+    var el = document.getElementById("pickBody");
+    document.getElementById("pickSub").textContent = latestDate ? latestDate : "";
+    if (!picks.length) {
+      el.innerHTML = '<div class="empty-state">現在、買い目が確定している新規の狙い目レースはありません。クラウドルーティンの次回巡回(最短1時間おき)で更新されます。</div>';
       return;
     }
-    var html = marked.parse(md, { breaks: false });
-    contentEl.innerHTML = wrapTables(html);
+    el.innerHTML = picks.map(pickCard).join("");
+  }
+
+  function raceCard(r){
+    var rCls = r.rate !== null && r.rate >= 100 ? "win" : r.rate !== null ? "loss" : "";
+    return '' +
+      '<div class="race-card">' +
+        badgePill(r.badge) +
+        '<p class="race-meta">' + escapeHtml(r.date || "") + "</p>" +
+        "<h3>" + escapeHtml(r.title) + "</h3>" +
+        '<p class="result-text">' + inline((r.reflection || r.resultText || "").slice(0, 260)) + "</p>" +
+        '<p class="bet-line">買い目: ' + escapeHtml(betOneLine(r.bet)) + "</p>" +
+        '<div class="foot-stat"><span>収支 ' + yen(r.profit) + '</span><span class="rate ' + rCls + '">回収率 ' + pct(r.rate) + "</span></div>" +
+      "</div>";
+  }
+
+  function renderRecent(md){
+    var races = parseRaces(md).filter(function(r){ return !r.pending; });
+    var el = document.getElementById("recentBody");
+    if (!races.length) { el.innerHTML = '<div class="empty-state">確定した結果がまだありません。</div>'; return; }
+    el.innerHTML = races.slice(-3).reverse().map(raceCard).join("");
+  }
+
+  function renderGrade(md){
+    var races = parseRaces(md).filter(function(r){ return !r.pending && r.grade; });
+    var el = document.getElementById("gradeBody");
+    if (!races.length) {
+      el.innerHTML = '<div class="empty-state">直近に購入した重賞（G1〜G3・Jpn1〜3）レースはまだありません。</div>';
+      return;
+    }
+    el.innerHTML = races.slice(-2).reverse().map(raceCard).join("");
+  }
+
+  function safeRender(fn, md, containerId){
+    try { fn(md); }
+    catch (e) {
+      var el = document.getElementById(containerId);
+      if (el) el.innerHTML = '<div class="parse-fail">この項目の自動生成に失敗しました。<a href="' + FILE_URL + '" target="_blank" rel="noopener">運用記録全文をGitHubで見る</a></div>';
+    }
+  }
+
+  function renderAll(md){
+    safeRender(renderStats, md, "statsBody");
+    safeRender(renderPick, md, "pickBody");
+    safeRender(renderRecent, md, "recentBody");
+    safeRender(renderGrade, md, "gradeBody");
   }
 
   function load(isManual){
-    if (isManual) {
-      syncText.textContent = "更新中…";
-    }
+    if (isManual) syncText.textContent = "更新中…";
     var url = RAW_URL + "?_=" + Date.now();
     fetch(url, { cache: "no-store" })
       .then(function(res){
@@ -215,21 +531,15 @@
         return res.text();
       })
       .then(function(md){
-        render(md);
+        renderAll(md.replace(/\r\n/g, "\n"));
         setSynced(new Date());
       })
       .catch(function(err){
-        setError("取得失敗（オフライン、または一時的な問題の可能性）。ボタンで再試行できます。");
-        if (contentEl.querySelector(".state-msg")) {
-          contentEl.innerHTML = '<div class="state-msg">運用記録を取得できませんでした。' +
-            '<br>' + escapeHtml(String(err && err.message || err)) +
-            '<br><a href="' + RAW_URL + '" target="_blank" rel="noopener">GitHubで直接見る</a></div>';
-        }
+        setError("取得失敗(オフライン、または一時的な問題の可能性)。ボタンで再試行できます。");
       });
   }
 
   refreshBtn.addEventListener("click", function(){ load(true); });
-
   document.addEventListener("visibilitychange", function(){
     if (document.visibilityState === "visible") load(false);
   });
