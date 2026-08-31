@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>仮想馬券日誌 | 自動更新版</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8E%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  :root{
+    --bg:#f3efe0;
+    --surface:#fffdf6;
+    --surface-2:#ece4cd;
+    --ink:#211c13;
+    --ink-muted:#7c7059;
+    --border:#ddd2b5;
+    --accent:#a9761f;
+    --win:#1f6b46;
+    --loss:#a23829;
+    --shadow:0 1px 2px rgba(33,28,19,.06), 0 8px 24px rgba(33,28,19,.07);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#101d17;
+      --surface:#16261e;
+      --surface-2:#1d3226;
+      --ink:#ece5d2;
+      --ink-muted:#93a598;
+      --border:#2c4437;
+      --accent:#d7ac57;
+      --win:#63b586;
+      --loss:#e08b72;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN",sans-serif;
+    line-height:1.8;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.01ms !important; transition-duration:.01ms !important;}
+  }
+  .wrap{max-width:680px; margin:0 auto; padding:0 18px 72px;}
+
+  .masthead{padding:26px 0 14px;}
+  .kicker{
+    display:flex; align-items:center; gap:8px;
+    font-family:"Oswald",sans-serif; font-size:11px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--ink-muted);
+  }
+  .kicker .dot{width:6px;height:6px;border-radius:50%; background:var(--win); flex:none;
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--win) 20%, transparent);}
+  h1{
+    font-family:"Shippori Mincho",serif; font-weight:800;
+    font-size:clamp(26px,7vw,36px); margin:.3em 0 .1em; text-wrap:balance; letter-spacing:.02em;
+  }
+  .lede{margin:0 0 4px; color:var(--ink-muted); font-size:14px; max-width:36em;}
+
+  .sync-bar{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    box-shadow:var(--shadow); padding:11px 14px; margin:16px 0 24px; font-size:12.5px; color:var(--ink-muted);
+  }
+  .sync-bar strong{color:var(--ink); font-weight:600;}
+  .sync-bar button{
+    font-family:"Oswald",sans-serif; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    background:var(--surface-2); color:var(--ink); border:1px solid var(--border); border-radius:8px;
+    padding:7px 12px; cursor:pointer;
+  }
+  .sync-bar button:active{transform:translateY(1px);}
+  .sync-bar button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .sync-dot{width:7px;height:7px;border-radius:50%; background:var(--win); flex:none; animation:pulse 2.4s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.35;transform:scale(.7);}}
+  .sync-bar.err .sync-dot{background:var(--loss); animation:none;}
+
+  /* rendered markdown content */
+  #content{background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:22px 20px 26px;}
+  #content h1{display:none;} /* the md's own H1 duplicates our masthead */
+  #content h2{
+    font-family:"Oswald",sans-serif; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink-muted); margin:34px 0 12px; display:flex; align-items:center; gap:10px;
+    border-bottom:0; padding-bottom:0;
+  }
+  #content h2:first-of-type{margin-top:0;}
+  #content h3{
+    font-family:"Shippori Mincho",serif; font-weight:600; font-size:18px; margin:28px 0 10px;
+    padding-top:16px; border-top:1px dashed var(--border); text-wrap:balance;
+  }
+  #content h3:first-of-type{border-top:none; padding-top:0;}
+  #content p{margin:0 0 12px; font-size:14.5px;}
+  #content ul, #content ol{margin:0 0 12px; padding-left:1.3em; font-size:14.5px;}
+  #content li{margin:4px 0;}
+  #content strong{color:var(--ink); font-weight:700;}
+  #content hr{border:none; border-top:1px dashed var(--border); margin:22px 0;}
+  #content blockquote{
+    margin:0 0 14px; padding:10px 14px; border-left:3px solid var(--accent);
+    background:color-mix(in srgb, var(--accent) 7%, transparent); border-radius:0 8px 8px 0;
+    font-size:13.8px; color:var(--ink);
+  }
+  #content code{
+    background:var(--surface-2); border-radius:4px; padding:1px 5px;
+    font-size:.92em; font-family:ui-monospace,Consolas,monospace;
+  }
+  #content a{color:var(--accent);}
+
+  .tablewrap{overflow-x:auto; margin:0 0 16px; border-radius:10px; border:1px solid var(--border);}
+  #content table{width:100%; border-collapse:collapse; font-size:13.5px; background:var(--surface);}
+  #content th{
+    text-align:left; font-family:"Oswald",sans-serif; font-size:10.5px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--ink-muted); font-weight:500; padding:8px 10px;
+    border-bottom:1px solid var(--border); background:var(--surface-2); white-space:nowrap;
+  }
+  #content td{padding:8px 10px; border-bottom:1px solid var(--border); font-variant-numeric:tabular-nums; white-space:nowrap;}
+  #content tr:last-child td{border-bottom:none;}
+
+  .state-msg{padding:40px 18px; text-align:center; color:var(--ink-muted); font-size:14px;}
+  .state-msg .spin{
+    width:22px;height:22px;margin:0 auto 14px;border-radius:50%;
+    border:2.5px solid var(--border); border-top-color:var(--accent);
+    animation:spin 0.9s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  footer{margin-top:22px; font-size:11.5px; color:var(--ink-muted); text-align:center;}
+  footer a{color:var(--ink-muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div class="kicker"><span class="dot" aria-hidden="true"></span>仮想シミュレーション・実際の金銭移動なし・自動更新版</div>
+    <h1>仮想馬券日誌</h1>
+    <p class="lede">GitHub上の運用記録を毎回そのまま取得して表示しています。ページを開くたびに最新の状態が見られます。</p>
+  </div>
+
+  <div class="sync-bar" id="syncBar">
+    <span><span class="sync-dot" id="syncDot" aria-hidden="true"></span> <span id="syncText">読み込み中…</span></span>
+    <button id="refreshBtn" type="button">今すぐ更新</button>
+  </div>
+
+  <div id="content">
+    <div class="state-msg"><div class="spin" aria-hidden="true"></div>運用記録を取得しています…</div>
+  </div>
+
+  <footer>データ元: <a href="https://github.com/taketaiko2001/keiba/blob/main/%E7%AB%B6%E9%A6%AC%E9%81%8B%E7%94%A8%E8%A8%98%E9%8C%B2.md" target="_blank" rel="noopener">GitHub: 競馬運用記録.md</a> ／ 開くたび自動取得・5分ごとに再取得</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var OWNER = "taketaiko2001";
+  var REPO = "keiba";
+  var BRANCH = "main";
+  var FILENAME = "競馬運用記録.md";
+  var RAW_URL = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/" + BRANCH + "/" + encodeURIComponent(FILENAME);
+
+  var contentEl = document.getElementById("content");
+  var syncBar = document.getElementById("syncBar");
+  var syncDot = document.getElementById("syncDot");
+  var syncText = document.getElementById("syncText");
+  var refreshBtn = document.getElementById("refreshBtn");
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function wrapTables(html){
+    return html.replace(/<table>/g, '<div class="tablewrap"><table>').replace(/<\/table>/g, "</table></div>");
+  }
+
+  function formatClock(d){
+    var hh = String(d.getHours()).padStart(2,"0");
+    var mm = String(d.getMinutes()).padStart(2,"0");
+    return hh + ":" + mm;
+  }
+
+  function setSynced(d){
+    syncBar.classList.remove("err");
+    syncText.innerHTML = "<strong>同期済み</strong> " + formatClock(d) + " 時点";
+  }
+
+  function setError(msg){
+    syncBar.classList.add("err");
+    syncText.textContent = msg;
+  }
+
+  function render(md){
+    if (typeof marked === "undefined") {
+      contentEl.innerHTML = '<div class="state-msg">Markdownレンダラーの読み込みに失敗しました。<a href="' + RAW_URL + '" target="_blank" rel="noopener">元データを直接見る</a></div>';
+      return;
+    }
+    var html = marked.parse(md, { breaks: false });
+    contentEl.innerHTML = wrapTables(html);
+  }
+
+  function load(isManual){
+    if (isManual) {
+      syncText.textContent = "更新中…";
+    }
+    var url = RAW_URL + "?_=" + Date.now();
+    fetch(url, { cache: "no-store" })
+      .then(function(res){
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.text();
+      })
+      .then(function(md){
+        render(md);
+        setSynced(new Date());
+      })
+      .catch(function(err){
+        setError("取得失敗（オフライン、または一時的な問題の可能性）。ボタンで再試行できます。");
+        if (contentEl.querySelector(".state-msg")) {
+          contentEl.innerHTML = '<div class="state-msg">運用記録を取得できませんでした。' +
+            '<br>' + escapeHtml(String(err && err.message || err)) +
+            '<br><a href="' + RAW_URL + '" target="_blank" rel="noopener">GitHubで直接見る</a></div>';
+        }
+      });
+  }
+
+  refreshBtn.addEventListener("click", function(){ load(true); });
+
+  document.addEventListener("visibilitychange", function(){
+    if (document.visibilityState === "visible") load(false);
+  });
+
+  load(false);
+  setInterval(function(){ load(false); }, 5 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
