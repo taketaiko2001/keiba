@@ -1,6 +1,6 @@
 """
-netkeiba(地方競馬 nar.netkeiba.com)のレース結果・払戻ページから、
-着順と各券種の払戻金を生HTMLから直接パースして取得するツール。
+netkeiba(JRA race.netkeiba.com / 地方競馬 nar.netkeiba.com、race_idの場コードで自動判別)
+のレース結果・払戻ページから、着順と各券種の払戻金を生HTMLから直接パースして取得するツール。
 
 使い方:
     python3 tools/netkeiba_result.py <race_id> [output.json]
@@ -35,8 +35,15 @@ def _text(el):
     return el.get_text(strip=True) if el else None
 
 
+def _domain_for(race_id: str) -> str:
+    # race_id の場コード(5-6桁目)が01-10ならJRA(race.netkeiba.com)、
+    # それ以外は地方競馬(nar.netkeiba.com)。
+    track_code = int(race_id[4:6])
+    return "race.netkeiba.com" if 1 <= track_code <= 10 else "nar.netkeiba.com"
+
+
 def fetch_result(race_id: str) -> dict:
-    url = f"https://nar.netkeiba.com/race/result.html?race_id={race_id}"
+    url = f"https://{_domain_for(race_id)}/race/result.html?race_id={race_id}"
     r = requests.get(url, headers=HEADERS, timeout=20)
     r.raise_for_status()
     r.encoding = r.apparent_encoding or "utf-8"

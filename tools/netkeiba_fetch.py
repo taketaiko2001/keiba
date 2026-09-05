@@ -1,6 +1,6 @@
 """
-netkeiba(地方競馬 nar.netkeiba.com)の出馬表ページから、
-出走馬・単勝オッズなどを生HTMLから直接パースして取得するツール。
+netkeiba(JRA race.netkeiba.com / 地方競馬 nar.netkeiba.com、race_idの場コードで自動判別)
+の出馬表ページから、出走馬・単勝オッズなどを生HTMLから直接パースして取得するツール。
 
 WebFetchの要約AIは表の列を読み違えることがある(実測で「人気順位」を
 「単勝オッズ」と誤って回答するケースを確認済み)ため、生HTMLをBeautifulSoup
@@ -25,8 +25,15 @@ HEADERS = {
 }
 
 
+def _domain_for(race_id: str) -> str:
+    # race_id の場コード(5-6桁目)が01-10ならJRA(race.netkeiba.com)、
+    # それ以外は地方競馬(nar.netkeiba.com)。
+    track_code = int(race_id[4:6])
+    return "race.netkeiba.com" if 1 <= track_code <= 10 else "nar.netkeiba.com"
+
+
 def fetch_shutuba(race_id: str) -> dict:
-    url = f"https://nar.netkeiba.com/race/shutuba.html?race_id={race_id}"
+    url = f"https://{_domain_for(race_id)}/race/shutuba.html?race_id={race_id}"
     r = requests.get(url, headers=HEADERS, timeout=20)
     r.raise_for_status()
     r.encoding = r.apparent_encoding or "utf-8"
@@ -51,7 +58,8 @@ def fetch_shutuba(race_id: str) -> dict:
             if m:
                 horse_id = m.group(1)
 
-        age_sex_el = row.select_one("span.Age")
+        # NAR: span.Age / JRA: td.Barei (両対応)
+        age_sex_el = row.select_one("span.Age") or row.select_one("td.Barei")
         age_sex = age_sex_el.get_text(strip=True) if age_sex_el else None  # 例: "牡5" (性別+年齢)
 
         jockey_a = row.select_one("td.Jockey span.Jockey a") or row.select_one("td.Jockey a")
@@ -71,7 +79,9 @@ def fetch_shutuba(race_id: str) -> dict:
             if m:
                 trainer_id = m.group(1)
 
-        weight_carried_el = row.select_one("td.Txt_C:not(.Popular)")
+        # JRA: 斤量tdはclass="Txt_C"のみ(枠番Waku1 Txt_C等の複合classと区別するため完全一致で探す)。
+        # NAR側は複合classの場合があるため、見つからなければ従来のfallbackを使う。
+        weight_carried_el = row.select_one('td[class="Txt_C"]') or row.select_one("td.Txt_C:not(.Popular)")
         weight_carried_kg = weight_carried_el.get_text(strip=True) if weight_carried_el else None  # 斤量
 
         body_weight = None
