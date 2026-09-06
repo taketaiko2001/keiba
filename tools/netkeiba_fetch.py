@@ -32,6 +32,48 @@ def _domain_for(race_id: str) -> str:
     return "race.netkeiba.com" if 1 <= track_code <= 10 else "nar.netkeiba.com"
 
 
+def fetch_jra_win_odds(race_id: str) -> dict:
+    """JRAレースの単勝オッズ・人気順位をAJAX APIから取得する。
+
+    2026-09-05頃確認: race.netkeiba.comのshutuba.htmlは単勝オッズ欄が
+    "---.-"という静的プレースホルダーのままで、実際の値はブラウザ上で
+    JSが`/api/api_get_jra_odds.html`を叩いて後から埋め込んでいる。この
+    APIはRefererヘッダ(該当レースのoddsページURL)が無いとstatus=middle・
+    data空("reason":"result odds empty")の空応答を返す(サイト側のアン
+    チスクレイピング対策と見られる)。Refererを付けて直接叩けば解決する。
+
+    戻り値: umaban文字列(例"1")をキーに {"win_odds": float|None,
+    "ninki_rank": int|None} を格納したdict。オッズがまだ発表されていない
+    (発売前・締切後など)場合は空dictを返す。
+    """
+    odds_page_url = f"https://race.netkeiba.com/odds/index.html?race_id={race_id}&type=b1"
+    api_url = f"https://race.netkeiba.com/api/api_get_jra_odds.html?race_id={race_id}&type=1&housiki=c99"
+    headers = dict(HEADERS)
+    headers["Referer"] = odds_page_url
+    r = requests.get(api_url, headers=headers, timeout=20)
+    r.raise_for_status()
+    payload = r.json()
+    win_data = (payload.get("data") or {}).get("odds", {}).get("1", {})
+    result = {}
+    for umaban_key, vals in win_data.items():
+        try:
+            umaban_norm = str(int(umaban_key))
+        except (TypeError, ValueError):
+            continue
+        odds_val = None
+        ninki_val = None
+        try:
+            odds_val = float(vals[0])
+        except (IndexError, TypeError, ValueError):
+            pass
+        try:
+            ninki_val = int(vals[2])
+        except (IndexError, TypeError, ValueError):
+            pass
+        result[umaban_norm] = {"win_odds": odds_val, "ninki_rank": ninki_val}
+    return result
+
+
 def fetch_shutuba(race_id: str) -> dict:
     url = f"https://{_domain_for(race_id)}/race/shutuba.html?race_id={race_id}"
     r = requests.get(url, headers=HEADERS, timeout=20)
@@ -124,6 +166,21 @@ def fetch_shutuba(race_id: str) -> dict:
             "win_odds": odds,
             "ninki_rank": ninki,
         })
+
+    # JRAレースはshutuba.html上の静的オッズが常にプレースホルダーのため、
+    # AJAX APIから実際の単勝オッズ・人気順位を取得して上書きする。
+    if _domain_for(race_id) == "race.netkeiba.com":
+        try:
+            odds_map = fetch_jra_win_odds(race_id)
+        except (requests.RequestException, ValueError):
+            odds_map = {}
+        for h in horses:
+            entry = odds_map.get(h["umaban"])
+            if entry:
+                if entry["win_odds"] is not None:
+                    h["win_odds"] = entry["win_odds"]
+                if entry["ninki_rank"] is not None:
+                    h["ninki_rank"] = str(entry["ninki_rank"])
 
     # オッズ昇順(人気順)に並べ替え。None(未確定)は末尾に。
     horses_sorted = sorted(horses, key=lambda h: (h["win_odds"] is None, h["win_odds"]))
