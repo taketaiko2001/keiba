@@ -34,8 +34,9 @@
 
 ## データ取得の優先順位
 1. `tools/*.py`（`pip install -q -r tools/requirements.txt`後、Bashで直接実行）— 生HTMLを直接パースするため誤読なし。この環境(keiba-env2)はNetwork accessがCustomで race.netkeiba.com / nar.netkeiba.com / db.netkeiba.com / www.jra.go.jp / www.oddspark.com への直接アクセスを許可済み。**使えるなら常にこれを主データ源にする。**
-2. `tools/*.py`が接続エラー(403・Connection refused・timeoutなど)で失敗する場合のみWebFetchにフォールバック。数値を明示的に列挙させ、人気とオッズの整合性を自分で検算する。不自然な値なら信用しない。
-3. WebFetchも`EGRESS_BLOCKED`等で使用不能ならWebSearchのみで判断可能な範囲に留め、安全対策を通過できないなら見送る。
+2. **JRAレースで`tools/netkeiba_fetch.py`のwin_odds/ninki_rankが全馬null(netkeibaのプレミアム会員限定制約、詳細は`.claude/skills/keiba-routine-hoshu/SKILL.md`参照)の場合、`tools/yahoo_keiba_odds.py <race_id>`(sports.yahoo.co.jpの公開オッズページ、ログイン不要)を試す。Network accessの許可リストに`sports.yahoo.co.jp`が追加されていることが前提(未追加ならこの手段は使えない)。**
+3. `tools/*.py`が接続エラー(403・Connection refused・timeoutなど)で失敗する場合のみWebFetchにフォールバック。数値を明示的に列挙させ、人気とオッズの整合性を自分で検算する。不自然な値なら信用しない。
+4. WebFetchも`EGRESS_BLOCKED`等で使用不能ならWebSearchのみで判断可能な範囲に留め、安全対策を通過できないなら見送る。
 
 ## ルーティン保守
 - RemoteTriggerの設定値・既知の落とし穴（EGRESS_BLOCKED対応、列ずれ不具合等）は`.claude/skills/keiba-routine-hoshu/SKILL.md`を参照。
